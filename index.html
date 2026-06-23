@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEJUR Cerus | Painel de Demandas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-row">
+    <div class="brand">
+      <div class="brand-mark">CR</div>
+      <div class="brand-text">
+        <h1>DEJUR · Painel de Monitoramento de Demandas</h1>
+        <span>Cerus Securitizadora de Créditos</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="refresh-pill">Base de dados: <b id="dataRange">—</b> · <b id="totalRecords">0</b> registros</div>
+      <a class="admin-link" href="admin.html">Painel Admin</a>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-view="executivo">Visão Executiva</button>
+    <button class="tab-btn" data-view="produtividade">Produtividade da Equipe</button>
+    <button class="tab-btn" data-view="sla">SLA</button>
+    <button class="tab-btn" data-view="gargalos">Gestão de Gargalos</button>
+  </div>
+</div>
+
+<div class="filterbar">
+  <div class="filter-group"><label>Ano</label><select id="f_ano"></select></div>
+  <div class="filter-group"><label>Mês</label><select id="f_mes"></select></div>
+  <div class="filter-group"><label>Responsável</label><select id="f_resp"></select></div>
+  <div class="filter-group"><label>Tipo de Demanda</label><select id="f_tipo"></select></div>
+  <div class="filter-group"><label>Status</label><select id="f_status"></select></div>
+  <div class="filter-group"><label>Setor Solicitante</label><select id="f_setor"></select></div>
+  <div class="filter-group"><label>Forma de Envio</label><select id="f_envio"></select></div>
+  <span class="filter-count"><b id="filterCount">0</b> de <span id="filterTotal">0</span> demandas filtradas</span>
+  <button class="btn-reset" id="btnReset">Limpar filtros</button>
+</div>
+
+<main>
+
+  <!-- ===================== VISÃO EXECUTIVA ===================== -->
+  <section class="view active" id="view-executivo">
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <div class="section-title">Distribuição da carga de trabalho</div>
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Demandas por Responsável <span class="sort-toggle" id="respSortToggle">
+          <button class="sort-btn active" data-sort="demandas">Ordenar por Demandas</button>
+          <button class="sort-btn" data-sort="tarefas">Ordenar por Tarefas</button>
+        </span></h3>
+        <div class="card-sub">Volume total e participação percentual — Tarefas/Demanda alto indica casos grandes concentrados em poucas demandas</div>
+        <div class="chart-wrap tall"><canvas id="chartResp"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Demandas por Tipo</h3>
+        <div class="card-sub">Distribuição por natureza da demanda</div>
+        <div class="chart-wrap tall"><canvas id="chartTipo"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Demandas por Setor Solicitante</h3>
+        <div class="card-sub">Ranking do maior para o menor volume</div>
+        <div class="chart-wrap"><canvas id="chartSetor"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Demandas por Status</h3>
+        <div class="card-sub">Situação atual da carteira</div>
+        <div class="chart-wrap"><canvas id="chartStatus"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-title">Evolução e desempenho</div>
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Evolução Mensal de Demandas</h3>
+        <div class="card-sub">Recebidas vs. concluídas, mês a mês</div>
+        <div class="chart-wrap"><canvas id="chartEvolucao"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Tempo Médio de Conclusão por Responsável</h3>
+        <div class="card-sub">Em dias corridos</div>
+        <div class="chart-wrap"><canvas id="chartTempo"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-title">Mapa de calor de demandas</div>
+    <div class="card">
+      <h3>Volume por dia da semana e mês</h3>
+      <div class="card-sub">Concentração de recebimento de demandas</div>
+      <div class="heatmap-wrap" id="heatmapWrap"></div>
+    </div>
+
+    <div class="insights" id="insightsBox">
+      <h3>Análise Inteligente</h3>
+      <ul class="insight-list" id="insightList"></ul>
+    </div>
+  </section>
+
+  <!-- ===================== PRODUTIVIDADE ===================== -->
+  <section class="view" id="view-produtividade">
+    <div class="section-title">Ranking de produtividade da equipe</div>
+    <div class="card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Responsável</th><th>Recebidas</th><th>Concluídas</th>
+              <th>Em Andamento</th><th>Taxa de Conclusão</th><th>Tempo Médio (dias)</th><th>Tarefas Executadas</th>
+            </tr>
+          </thead>
+          <tbody id="prodTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SLA ===================== -->
+  <section class="view" id="view-sla">
+    <div class="section-title">Painel de SLA — demandas concluídas</div>
+    <div class="gauge-grid" id="gaugeGrid"></div>
+
+    <div class="section-title">Detalhamento por responsável</div>
+    <div class="card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Responsável</th><th>Até 5 dias</th><th>Até 10 dias</th><th>Acima de 10 dias</th><th>Acima de 20 dias</th><th>Total</th></tr>
+          </thead>
+          <tbody id="slaTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== GARGALOS ===================== -->
+  <section class="view" id="view-gargalos">
+    <div class="section-title">Gargalos operacionais</div>
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Responsáveis com Maior Backlog</h3>
+        <div class="card-sub">Demandas em andamento, por responsável</div>
+        <div class="chart-wrap"><canvas id="chartBacklogResp"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Setores que Mais Demandam</h3>
+        <div class="card-sub">Volume total, todos os status</div>
+        <div class="chart-wrap"><canvas id="chartBacklogSetor"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-title">Top 10 demandas com maior prazo de conclusão</div>
+    <div class="card">
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Assunto</th><th>Responsável</th><th>Setor</th><th>Dias</th><th>Status</th></tr></thead>
+          <tbody id="top10Body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-title">Demandas em andamento (sem conclusão)</div>
+    <div class="card">
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Assunto</th><th>Responsável</th><th>Setor</th><th>Dias em aberto</th><th>Recebida em</th></tr></thead>
+          <tbody id="openBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>Painel gerado a partir da base de demandas do DEJUR · Cerus Securitizadora de Créditos S.A.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="config.js"></script>
+<script src="data/sample-data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

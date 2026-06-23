@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEJUR Cerus | Painel Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/admin.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-row">
+    <div class="brand">
+      <div class="brand-mark">CR</div>
+      <div class="brand-text">
+        <h1>DEJUR · Painel Administrativo</h1>
+        <span>Cerus Securitizadora de Créditos</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <a class="admin-link" href="index.html">← Voltar ao painel público</a>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <div class="section-title">Status da conexão com a planilha</div>
+  <div class="card" id="statusCard">
+    <p id="statusText">Verificando configuração...</p>
+  </div>
+
+  <div class="section-title">Adicionar demanda manualmente</div>
+  <div class="card">
+    <form id="manualForm" class="admin-form">
+      <div class="form-row">
+        <label>Assunto<input type="text" name="assunto" required></label>
+        <label>Caso / e-mail (opcional)<input type="text" name="caso"></label>
+      </div>
+      <div class="form-row">
+        <label>Responsável<input type="text" name="responsavel" required></label>
+        <label>Setor solicitante<input type="text" name="setor" required></label>
+      </div>
+      <div class="form-row">
+        <label>Tipo de demanda<input type="text" name="demanda" required></label>
+        <label>Forma de envio<input type="text" name="forma_envio"></label>
+      </div>
+      <div class="form-row">
+        <label>Data de recebimento<input type="date" name="recebimento" required></label>
+        <label>Data de envio<input type="date" name="envio"></label>
+        <label>Data de conclusão<input type="date" name="conclusao"></label>
+      </div>
+      <div class="form-row">
+        <label>Status
+          <select name="status" required>
+            <option value="Concluído">Concluído</option>
+            <option value="Em andamento">Em andamento</option>
+          </select>
+        </label>
+        <label>Tarefas executadas<input type="number" name="tarefas" min="0" value="1"></label>
+        <label class="checkbox-label"><input type="checkbox" name="continuacao"> É continuação de outra demanda</label>
+      </div>
+      <button type="submit" class="btn-primary">Enviar para a planilha</button>
+    </form>
+    <p class="form-msg" id="manualMsg"></p>
+  </div>
+
+  <div class="section-title">Importar planilha Excel</div>
+  <div class="card">
+    <p class="card-sub">
+      O arquivo deve ter colunas com os mesmos nomes usados no painel:
+      <span class="mono">assunto, recebimento, responsavel, demanda, envio, forma_envio, conclusao, dias, status, tarefas, setor, caso, continuacao</span>.
+      Datas no formato AAAA-MM-DD.
+    </p>
+    <input type="file" id="excelInput" accept=".xlsx,.xls,.csv">
+    <div id="excelPreviewWrap"></div>
+    <button type="button" class="btn-primary" id="btnSendExcel" style="display:none;">Enviar linhas para a planilha</button>
+    <p class="form-msg" id="excelMsg"></p>
+  </div>
+
+</main>
+
+<footer>Painel administrativo · DEJUR Cerus Securitizadora de Créditos S.A.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<script src="assets/admin.js"></script>
+</body>
+</html>
