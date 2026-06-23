@@ -1,7 +1,22 @@
 /* Painel DEJUR Cerus — lógica do admin.
-   Escreve na planilha Google através do Web App do Google Apps Script (apps-script/Code.gs). */
+   Escreve na planilha Google através do Web App do Google Apps Script (apps-script/Code.gs).
+   A ordem abaixo precisa bater exatamente com os cabeçalhos da primeira aba da planilha. */
 
-const COLUMNS = ['assunto','recebimento','responsavel','demanda','envio','forma_envio','conclusao','dias','status','tarefas','setor','ano','mes','dow','continuacao','caso'];
+const SHEET_COLUMNS = [
+  'ASSUNTO / E-MAIL',
+  'DATA RECEBIMENTO',
+  'DATA ENCAMINHAMENTO PARA O RESPONSAVEL - CIÊNCIA DO RESPONSAVEL',
+  'RESPONSÁVEL',
+  'DEMANDA',
+  'DATA DE ENVIO',
+  'FORMA DE ENVIO',
+  'DATA DE CONCLUSÃO',
+  'DIAS PARA CONCLUSÃO',
+  'STATUS',
+  'OBSERVAÇÕES',
+  'QUANTIDADE DE TAREFAS',
+  'SETOR SOLICITANTE',
+];
 
 function appsScriptUrl(){
   const url = window.APP_CONFIG && window.APP_CONFIG.APPS_SCRIPT_URL;
@@ -50,19 +65,40 @@ async function checkStatus(){
   }
 }
 
-function deriveFields(row){
-  const rec = row.recebimento ? new Date(row.recebimento + 'T00:00:00') : null;
-  const concl = row.conclusao ? new Date(row.conclusao + 'T00:00:00') : null;
-  const ano = rec ? rec.getFullYear() : '';
-  const mes = rec ? rec.getMonth()+1 : '';
-  const dow = rec ? (rec.getDay()+6)%7 : ''; // 0=Seg ... 6=Dom, igual ao painel
-  let dias = '';
-  if(rec && concl){ dias = Math.max(0, Math.round((concl-rec)/(1000*60*60*24))); }
-  return { ...row, ano, mes, dow, dias: row.dias || dias, caso: row.caso || row.assunto };
+/* Converte AAAA-MM-DD (input type=date) para DD/MM/AAAA, igual ao resto da planilha. */
+function toBRDate(iso){
+  if(!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
 }
 
-function rowToOrderedArray(row){
-  return COLUMNS.map(c => row[c] ?? '');
+function calcDias(recebimentoISO, conclusaoISO){
+  if(!recebimentoISO || !conclusaoISO) return '';
+  const rec = new Date(recebimentoISO + 'T00:00:00');
+  const concl = new Date(conclusaoISO + 'T00:00:00');
+  return Math.max(0, Math.round((concl-rec)/(1000*60*60*24)));
+}
+
+function rowFromForm(fd){
+  const recebimento = fd.get('recebimento') || '';
+  const conclusao = fd.get('conclusao') || '';
+  const dias = fd.get('dias') || calcDias(recebimento, conclusao);
+  const row = {
+    'ASSUNTO / E-MAIL': fd.get('assunto') || '',
+    'DATA RECEBIMENTO': toBRDate(recebimento),
+    'DATA ENCAMINHAMENTO PARA O RESPONSAVEL - CIÊNCIA DO RESPONSAVEL': '',
+    'RESPONSÁVEL': fd.get('responsavel') || '',
+    'DEMANDA': fd.get('demanda') || '',
+    'DATA DE ENVIO': toBRDate(fd.get('envio') || ''),
+    'FORMA DE ENVIO': fd.get('forma_envio') || '',
+    'DATA DE CONCLUSÃO': toBRDate(conclusao),
+    'DIAS PARA CONCLUSÃO': dias,
+    'STATUS': fd.get('status') || '',
+    'OBSERVAÇÕES': fd.get('observacoes') || '',
+    'QUANTIDADE DE TAREFAS': Number(fd.get('tarefas')) || 0,
+    'SETOR SOLICITANTE': fd.get('setor') || '',
+  };
+  return SHEET_COLUMNS.map(c => row[c]);
 }
 
 /* ============ FORMULÁRIO MANUAL ============ */
@@ -73,16 +109,12 @@ function initManualForm(){
     e.preventDefault();
     msg.textContent = ''; msg.className = 'form-msg';
     const fd = new FormData(form);
-    const row = {};
-    COLUMNS.forEach(c => row[c] = fd.get(c) || '');
-    row.continuacao = fd.get('continuacao') === 'on';
-    row.tarefas = Number(fd.get('tarefas')) || 0;
-    const full = deriveFields(row);
+    const orderedRow = rowFromForm(fd);
 
     const btn = form.querySelector('button[type=submit]');
     btn.disabled = true;
     try{
-      await postToAppsScript({ action:'append', rows:[ rowToOrderedArray(full) ] });
+      await postToAppsScript({ action:'append', rows:[ orderedRow ] });
       msg.textContent = 'Demanda enviada com sucesso para a planilha.';
       msg.className = 'form-msg ok';
       form.reset();
@@ -97,6 +129,27 @@ function initManualForm(){
 
 /* ============ IMPORTAÇÃO DE EXCEL ============ */
 let pendingRows = [];
+
+function rowFromExcelRecord(r){
+  const recebimento = r['recebimento'] || r['DATA RECEBIMENTO'] || '';
+  const conclusao = r['conclusao'] || r['DATA DE CONCLUSÃO'] || '';
+  const dias = r['dias'] || r['DIAS PARA CONCLUSÃO'] || '';
+  return {
+    'ASSUNTO / E-MAIL': r['assunto'] || r['ASSUNTO / E-MAIL'] || '',
+    'DATA RECEBIMENTO': recebimento,
+    'DATA ENCAMINHAMENTO PARA O RESPONSAVEL - CIÊNCIA DO RESPONSAVEL': r['DATA ENCAMINHAMENTO PARA O RESPONSAVEL - CIÊNCIA DO RESPONSAVEL'] || '',
+    'RESPONSÁVEL': r['responsavel'] || r['RESPONSÁVEL'] || '',
+    'DEMANDA': r['demanda'] || r['DEMANDA'] || '',
+    'DATA DE ENVIO': r['envio'] || r['DATA DE ENVIO'] || '',
+    'FORMA DE ENVIO': r['forma_envio'] || r['FORMA DE ENVIO'] || '',
+    'DATA DE CONCLUSÃO': conclusao,
+    'DIAS PARA CONCLUSÃO': dias,
+    'STATUS': r['status'] || r['STATUS'] || '',
+    'OBSERVAÇÕES': r['observacoes'] || r['OBSERVAÇÕES'] || '',
+    'QUANTIDADE DE TAREFAS': Number(r['tarefas'] || r['QUANTIDADE DE TAREFAS']) || 0,
+    'SETOR SOLICITANTE': r['setor'] || r['SETOR SOLICITANTE'] || '',
+  };
+}
 
 function initExcelImport(){
   const input = document.getElementById('excelInput');
@@ -122,20 +175,14 @@ function initExcelImport(){
       return;
     }
 
-    pendingRows = json.map(r=>{
-      const row = {};
-      COLUMNS.forEach(c => row[c] = r[c] ?? r[c.charAt(0).toUpperCase()+c.slice(1)] ?? '');
-      row.continuacao = row.continuacao === true || row.continuacao === 'true' || row.continuacao === 'TRUE' || row.continuacao === 1;
-      row.tarefas = Number(row.tarefas) || 0;
-      return deriveFields(row);
-    });
+    pendingRows = json.map(rowFromExcelRecord);
 
     previewWrap.innerHTML = `
       <p class="card-sub">${pendingRows.length} linha(s) detectada(s). Prévia das primeiras 5:</p>
       <div class="table-scroll">
         <table>
-          <thead><tr>${COLUMNS.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
-          <tbody>${pendingRows.slice(0,5).map(r=>`<tr>${COLUMNS.map(c=>`<td>${r[c]}</td>`).join('')}</tr>`).join('')}</tbody>
+          <thead><tr>${SHEET_COLUMNS.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+          <tbody>${pendingRows.slice(0,5).map(r=>`<tr>${SHEET_COLUMNS.map(c=>`<td>${r[c]}</td>`).join('')}</tr>`).join('')}</tbody>
         </table>
       </div>`;
     btnSend.style.display = 'inline-block';
@@ -145,7 +192,7 @@ function initExcelImport(){
     msg.textContent = ''; msg.className = 'form-msg';
     btnSend.disabled = true;
     try{
-      await postToAppsScript({ action:'append', rows: pendingRows.map(rowToOrderedArray) });
+      await postToAppsScript({ action:'append', rows: pendingRows.map(r => SHEET_COLUMNS.map(c => r[c])) });
       msg.textContent = `${pendingRows.length} linha(s) enviada(s) com sucesso para a planilha.`;
       msg.className = 'form-msg ok';
       pendingRows = [];

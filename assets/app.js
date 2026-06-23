@@ -13,6 +13,48 @@ let respSortMode = 'demandas';
 
 /* ============ CARGA DE DADOS ============ */
 
+/* Converte datas no formato DD/MM/AAAA (planilha) ou AAAA-MM-DD (já ISO) para ISO. */
+function toISODate(s){
+  if(!s) return '';
+  s = String(s).trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return '';
+}
+
+function deriveCalendarFields(row){
+  const rec = row.recebimento ? new Date(row.recebimento + 'T00:00:00') : null;
+  return {
+    ...row,
+    ano: rec ? rec.getFullYear() : null,
+    mes: rec ? rec.getMonth()+1 : null,
+    dow: rec ? (rec.getDay()+6)%7 : null, // 0=Seg ... 6=Dom
+  };
+}
+
+/* Linhas vindas da planilha real do DEJUR (cabeçalhos em português, datas DD/MM/AAAA). */
+function normalizeSheetRow(d){
+  const assunto = d['ASSUNTO / E-MAIL'] || '';
+  const row = {
+    assunto,
+    recebimento: toISODate(d['DATA RECEBIMENTO']),
+    responsavel: d['RESPONSÁVEL'] || '',
+    demanda: d['DEMANDA'] || '',
+    envio: toISODate(d['DATA DE ENVIO']),
+    forma_envio: d['FORMA DE ENVIO'] || '',
+    conclusao: toISODate(d['DATA DE CONCLUSÃO']),
+    dias: Number(d['DIAS PARA CONCLUSÃO']) || 0,
+    status: d['STATUS'] || '',
+    tarefas: Number(d['QUANTIDADE DE TAREFAS']) || 0,
+    setor: d['SETOR SOLICITANTE'] || '',
+    continuacao: false,
+    caso: assunto,
+  };
+  return deriveCalendarFields(row);
+}
+
+/* Linhas já no formato interno (usadas pelo data/sample-data.js). */
 function normalizeRow(d){
   return {
     assunto: d.assunto || '',
@@ -57,7 +99,12 @@ function loadData(){
         loadFromSample();
         return;
       }
-      RAW_DATA = results.data.map(normalizeRow);
+      RAW_DATA = results.data.filter(r => r['ASSUNTO / E-MAIL'] || r['RESPONSÁVEL']).map(normalizeSheetRow);
+      if(!RAW_DATA.length){
+        console.warn('Nenhuma linha válida encontrada na planilha — usando dados de exemplo.');
+        loadFromSample();
+        return;
+      }
       init();
     },
     error: (err) => {

@@ -37,16 +37,12 @@
   <div class="card">
     <form id="manualForm" class="admin-form">
       <div class="form-row">
-        <label>Assunto<input type="text" name="assunto" required></label>
-        <label>Caso / e-mail (opcional)<input type="text" name="caso"></label>
-      </div>
-      <div class="form-row">
-        <label>Responsável<input type="text" name="responsavel" required></label>
+        <label>Assunto / e-mail<input type="text" name="assunto" required></label>
         <label>Setor solicitante<input type="text" name="setor" required></label>
       </div>
       <div class="form-row">
-        <label>Tipo de demanda<input type="text" name="demanda" required></label>
-        <label>Forma de envio<input type="text" name="forma_envio"></label>
+        <label>Responsável<input type="text" name="responsavel" required></label>
+        <label>Demanda<input type="text" name="demanda" required></label>
       </div>
       <div class="form-row">
         <label>Data de recebimento<input type="date" name="recebimento" required></label>
@@ -54,14 +50,18 @@
         <label>Data de conclusão<input type="date" name="conclusao"></label>
       </div>
       <div class="form-row">
+        <label>Forma de envio<input type="text" name="forma_envio"></label>
         <label>Status
           <select name="status" required>
             <option value="Concluído">Concluído</option>
-            <option value="Em andamento">Em andamento</option>
+            <option value="Em Andamento">Em Andamento</option>
           </select>
         </label>
         <label>Tarefas executadas<input type="number" name="tarefas" min="0" value="1"></label>
-        <label class="checkbox-label"><input type="checkbox" name="continuacao"> É continuação de outra demanda</label>
+      </div>
+      <div class="form-row">
+        <label>Observações<input type="text" name="observacoes"></label>
+        <label>Dias para conclusão (deixe vazio para calcular automaticamente)<input type="number" name="dias" min="0"></label>
       </div>
       <button type="submit" class="btn-primary">Enviar para a planilha</button>
     </form>
@@ -71,9 +71,11 @@
   <div class="section-title">Importar planilha Excel</div>
   <div class="card">
     <p class="card-sub">
-      O arquivo deve ter colunas com os mesmos nomes usados no painel:
-      <span class="mono">assunto, recebimento, responsavel, demanda, envio, forma_envio, conclusao, dias, status, tarefas, setor, caso, continuacao</span>.
-      Datas no formato AAAA-MM-DD.
+      O arquivo deve ter colunas com os mesmos nomes usados na planilha do DEJUR:
+      <span class="mono">ASSUNTO / E-MAIL, DATA RECEBIMENTO, RESPONSÁVEL, DEMANDA, DATA DE ENVIO, FORMA DE ENVIO,
+      DATA DE CONCLUSÃO, DIAS PARA CONCLUSÃO, STATUS, OBSERVAÇÕES, QUANTIDADE DE TAREFAS, SETOR SOLICITANTE</span>
+      (ou os nomes simplificados <span class="mono">assunto, recebimento, responsavel, demanda, envio, forma_envio,
+      conclusao, dias, status, observacoes, tarefas, setor</span>). Datas no formato DD/MM/AAAA.
     </p>
     <input type="file" id="excelInput" accept=".xlsx,.xls,.csv">
     <div id="excelPreviewWrap"></div>

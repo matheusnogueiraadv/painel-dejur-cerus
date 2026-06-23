@@ -5,24 +5,21 @@
  * 1. Abra a planilha Google que será a fonte de dados.
  * 2. Extensões > Apps Script.
  * 3. Apague o conteúdo padrão e cole este arquivo inteiro.
- * 4. Ajuste SHEET_NAME abaixo se sua aba não se chamar "dados".
- * 5. Implantar > Nova implantação > tipo "App da Web".
+ * 4. Implantar > Nova implantação > tipo "App da Web".
  *    - Executar como: Eu (sua conta)
  *    - Quem pode acessar: Qualquer pessoa
- * 6. Copie a URL gerada e cole em config.js como APPS_SCRIPT_URL.
+ * 5. Copie a URL gerada e cole em config.js como APPS_SCRIPT_URL.
  *
- * A primeira linha da aba deve ter os cabeçalhos, na mesma ordem usada pelo painel:
- * assunto, recebimento, responsavel, demanda, envio, forma_envio, conclusao, dias,
- * status, tarefas, setor, ano, mes, dow, continuacao, caso
+ * Usa sempre a PRIMEIRA aba da planilha (a mesma que é publicada como CSV
+ * para o painel público). Os cabeçalhos da primeira linha devem ser:
+ * ASSUNTO / E-MAIL | DATA RECEBIMENTO | DATA ENCAMINHAMENTO PARA O
+ * RESPONSAVEL - CIÊNCIA DO RESPONSAVEL | RESPONSÁVEL | DEMANDA | DATA DE
+ * ENVIO | FORMA DE ENVIO | DATA DE CONCLUSÃO | DIAS PARA CONCLUSÃO |
+ * STATUS | OBSERVAÇÕES | QUANTIDADE DE TAREFAS | SETOR SOLICITANTE
  */
 
-const SHEET_NAME = 'dados';
-
 function getSheet_(){
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  if(!sheet) throw new Error('Aba "' + SHEET_NAME + '" não encontrada na planilha.');
-  return sheet;
+  return SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
 }
 
 function jsonResponse_(obj){
