@@ -89,6 +89,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="config.js"></script>
+<script src="config.local.js" onerror="console.warn('config.local.js não encontrado — usando APPS_SCRIPT_URL de config.js (ver README.md).')"></script>
+<script src="config.runtime.js" onerror="console.warn('config.runtime.js não encontrado — gerado apenas no build do Vercel/Netlify (ver README.md).')"></script>
 <script src="assets/admin.js"></script>
 </body>
 </html>

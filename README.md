@@ -20,9 +20,17 @@ assets/app.js          lógica do dashboard público
 assets/admin.js        lógica do admin
 assets/admin.css       estilos específicos do admin
 apps-script/Code.gs    script a ser colado no Google Apps Script da planilha
-config.js              URLs da planilha/Apps Script (preencher antes do deploy)
+config.js              SHEET_CSV_URL (não sensível, versionado) + placeholder de APPS_SCRIPT_URL
+config.local.js        APPS_SCRIPT_URL real, NUNCA commitado (está no .gitignore) — só para uso local
 data/sample-data.js    dados de exemplo, usados como fallback se config.js não estiver preenchido
 ```
+
+`APPS_SCRIPT_URL` permite **gravar** dados na planilha (qualquer pessoa
+com a URL pode inserir linhas), então ela não fica no `config.js`
+versionado — isso importa porque este repositório é público no GitHub.
+Para uso local, crie `config.local.js` (veja o passo 2) com a URL real;
+em produção (Vercel/Netlify), ela é injetada via variável de ambiente no
+build, nunca aparecendo no código-fonte (veja o passo 4).
 
 ## Colunas da planilha (primeira aba, primeira linha = cabeçalho)
 
@@ -65,8 +73,12 @@ não importa como ela se chama — só a ordem/nome das colunas importa.
 4. Tipo: **App da Web**. Executar como: **Eu**. Quem pode acessar:
    **Qualquer pessoa**.
 5. Autorize as permissões solicitadas (é a sua própria conta Google).
-6. Copie a URL gerada (termina em `/exec`) e cole em `config.js`, no
-   campo `APPS_SCRIPT_URL`.
+6. Copie a URL gerada (termina em `/exec`). Crie um arquivo
+   `config.local.js` na raiz do projeto (não será commitado) com:
+   ```js
+   window.APP_CONFIG = window.APP_CONFIG || {};
+   window.APP_CONFIG.APPS_SCRIPT_URL = "COLE_A_URL_AQUI";
+   ```
 
 > Sempre que o código do `Code.gs` for alterado, é preciso criar uma
 > **nova implantação** (ou editar a implantação existente) para a
@@ -83,13 +95,35 @@ Se `config.js` ainda não estiver preenchido, `index.html` usa
 automaticamente os dados de exemplo em `data/sample-data.js`, então o
 painel público sempre funciona mesmo antes do setup da planilha.
 
-### 4. Publicar para a equipe
+### 4. Publicar para a equipe (repositório público)
 
 Suba este projeto para um repositório no GitHub e conecte a
-[Vercel](https://vercel.com) ou [Netlify](https://netlify.com)
-(ou habilite GitHub Pages) — qualquer uma gera uma URL pública
-automaticamente a cada novo commit, sem necessidade de configuração de
-servidor.
+[Vercel](https://vercel.com) ou [Netlify](https://netlify.com) — qualquer
+uma gera uma URL pública automaticamente a cada novo commit.
+
+Como o repositório é **público**, `APPS_SCRIPT_URL` não pode estar no
+código. Em vez de GitHub Pages (que não tem variáveis de ambiente),
+use Vercel ou Netlify com um Build Command que gera `config.js` na hora
+do deploy, lendo a URL de uma variável de ambiente configurada no
+painel do serviço (nunca no código):
+
+1. No painel do Vercel/Netlify, em **Environment Variables**, crie
+   `APPS_SCRIPT_URL` com o valor real (a mesma URL do passo 2).
+2. Configure o **Build Command** como:
+   ```
+   echo "window.APP_CONFIG=window.APP_CONFIG||{};window.APP_CONFIG.APPS_SCRIPT_URL='$APPS_SCRIPT_URL';" > config.runtime.js
+   ```
+3. Adicione `<script src="config.runtime.js"></script>` depois de
+   `config.js` em `admin.html` (mesmo padrão usado para
+   `config.local.js` em desenvolvimento local — só o admin precisa de
+   `APPS_SCRIPT_URL`; um 404 nesse arquivo não quebra a página, só
+   significa que a URL de gravação não foi configurada ainda).
+4. Output/Publish directory: a raiz do projeto (`.`), já que não há
+   etapa de bundling além desse script gerando um arquivo.
+
+Assim a URL de gravação nunca aparece no histórico do Git nem no código
+visível publicamente — só existe em tempo de build, dentro da
+infraestrutura do Vercel/Netlify.
 
 ## Formato esperado no upload de Excel (admin)
 
