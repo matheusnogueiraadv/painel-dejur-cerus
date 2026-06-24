@@ -24,3 +24,23 @@
 #statusText.warn{color:var(--yellow); font-weight:700;}
 #excelPreviewWrap{margin:14px 0;}
 #excelPreviewWrap table{font-size:11.5px;}
+
+/* ===== AUTH GATE ===== */
+.auth-gate{
+  position:fixed; inset:0; background:var(--gray-bg); z-index:100;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.auth-box{
+  background:var(--gray-card); border-radius:var(--radius); box-shadow:var(--shadow);
+  border:1px solid var(--gray-line); padding:32px 28px; max-width:340px; width:100%;
+  display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;
+}
+.auth-mark{margin:0 0 4px 0;}
+.auth-box h2{margin:0; font-size:16px; font-weight:800; color:var(--navy);}
+.auth-box .card-sub{margin:0 0 6px 0;}
+.auth-box input[type="password"]{
+  width:100%; font-family:'Manrope'; font-size:13px; font-weight:600; color:var(--text);
+  padding:9px 12px; border-radius:8px; border:1px solid var(--gray-line); background:#FAFBFC;
+}
+.auth-box .btn-primary{align-self:center;}
+.auth-box .form-msg{margin-top:0; min-height:16px;}

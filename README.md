@@ -20,17 +20,20 @@ assets/app.js          lógica do dashboard público
 assets/admin.js        lógica do admin
 assets/admin.css       estilos específicos do admin
 apps-script/Code.gs    script a ser colado no Google Apps Script da planilha
-config.js              SHEET_CSV_URL (não sensível, versionado) + placeholder de APPS_SCRIPT_URL
-config.local.js        APPS_SCRIPT_URL real, NUNCA commitado (está no .gitignore) — só para uso local
+config.js              SHEET_CSV_URL (não sensível, versionado) + placeholders de APPS_SCRIPT_URL/ADMIN_PASSWORD_HASH
+config.local.js        valores reais, NUNCA commitado (está no .gitignore) — só para uso local
+assets/admin-auth.js   trava de senha do admin (lê o hash de window.APP_CONFIG, nunca hardcoded)
 data/sample-data.js    dados de exemplo, usados como fallback se config.js não estiver preenchido
 ```
 
-`APPS_SCRIPT_URL` permite **gravar** dados na planilha (qualquer pessoa
-com a URL pode inserir linhas), então ela não fica no `config.js`
-versionado — isso importa porque este repositório é público no GitHub.
-Para uso local, crie `config.local.js` (veja o passo 2) com a URL real;
-em produção (Vercel/Netlify), ela é injetada via variável de ambiente no
-build, nunca aparecendo no código-fonte (veja o passo 4).
+`APPS_SCRIPT_URL` permite **gravar** dados na planilha e
+`ADMIN_PASSWORD_HASH` é o hash da senha do admin — nenhum dos dois fica
+no `config.js` versionado, porque este repositório é público no GitHub
+(mesmo em hash, uma senha previsível seria quebrável por força bruta
+num repo público). Para uso local, crie `config.local.js` (veja os
+passos 2 e 3) com os valores reais; em produção (Vercel/Netlify), eles
+são injetados via variável de ambiente no build, nunca aparecendo no
+código-fonte (veja o passo 5).
 
 ## Colunas da planilha (primeira aba, primeira linha = cabeçalho)
 
@@ -84,7 +87,24 @@ não importa como ela se chama — só a ordem/nome das colunas importa.
 > **nova implantação** (ou editar a implantação existente) para a
 > mudança valer na URL pública.
 
-### 3. Testar localmente
+### 3. Configurar a senha do admin
+
+`admin.html` pede uma senha antes de mostrar o conteúdo (não é
+segurança forte — qualquer pessoa com acesso ao DevTools consegue
+contornar — só evita acesso casual de quem não deveria ter o link).
+
+1. Gere o hash SHA-256 da senha escolhida. No navegador, abra o
+   DevTools (F12), aba Console, e rode:
+   ```js
+   crypto.subtle.digest('SHA-256', new TextEncoder().encode('SUA_SENHA_AQUI'))
+     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
+   ```
+2. Adicione o resultado ao `config.local.js`:
+   ```js
+   window.APP_CONFIG.ADMIN_PASSWORD_HASH = "COLE_O_HASH_AQUI";
+   ```
+
+### 4. Testar localmente
 
 Abra `admin.html` no navegador — a seção "Status da conexão" deve
 mostrar "Conectado ao Apps Script da planilha". Teste adicionar uma
@@ -95,34 +115,35 @@ Se `config.js` ainda não estiver preenchido, `index.html` usa
 automaticamente os dados de exemplo em `data/sample-data.js`, então o
 painel público sempre funciona mesmo antes do setup da planilha.
 
-### 4. Publicar para a equipe (repositório público)
+### 5. Publicar para a equipe (repositório público)
 
 Suba este projeto para um repositório no GitHub e conecte a
 [Vercel](https://vercel.com) ou [Netlify](https://netlify.com) — qualquer
 uma gera uma URL pública automaticamente a cada novo commit.
 
-Como o repositório é **público**, `APPS_SCRIPT_URL` não pode estar no
-código. Em vez de GitHub Pages (que não tem variáveis de ambiente),
-use Vercel ou Netlify com um Build Command que gera `config.js` na hora
-do deploy, lendo a URL de uma variável de ambiente configurada no
-painel do serviço (nunca no código):
+Como o repositório é **público**, `APPS_SCRIPT_URL` e
+`ADMIN_PASSWORD_HASH` não podem estar no código. Em vez de GitHub Pages
+(que não tem variáveis de ambiente), use Vercel ou Netlify com um Build
+Command que gera `config.runtime.js` na hora do deploy, lendo os
+valores de variáveis de ambiente configuradas no painel do serviço
+(nunca no código):
 
 1. No painel do Vercel/Netlify, em **Environment Variables**, crie
-   `APPS_SCRIPT_URL` com o valor real (a mesma URL do passo 2).
+   `APPS_SCRIPT_URL` e `ADMIN_PASSWORD_HASH` com os valores reais (os
+   mesmos dos passos 2 e 3).
 2. Configure o **Build Command** como:
    ```
-   echo "window.APP_CONFIG=window.APP_CONFIG||{};window.APP_CONFIG.APPS_SCRIPT_URL='$APPS_SCRIPT_URL';" > config.runtime.js
+   echo "window.APP_CONFIG=window.APP_CONFIG||{};window.APP_CONFIG.APPS_SCRIPT_URL='$APPS_SCRIPT_URL';window.APP_CONFIG.ADMIN_PASSWORD_HASH='$ADMIN_PASSWORD_HASH';" > config.runtime.js
    ```
-3. Adicione `<script src="config.runtime.js"></script>` depois de
-   `config.js` em `admin.html` (mesmo padrão usado para
-   `config.local.js` em desenvolvimento local — só o admin precisa de
-   `APPS_SCRIPT_URL`; um 404 nesse arquivo não quebra a página, só
-   significa que a URL de gravação não foi configurada ainda).
+3. `admin.html` já carrega `<script src="config.runtime.js">` depois de
+   `config.js` (mesmo padrão usado para `config.local.js` em
+   desenvolvimento local — um 404 nesse arquivo não quebra a página, só
+   significa que os valores de produção não foram configurados ainda).
 4. Output/Publish directory: a raiz do projeto (`.`), já que não há
    etapa de bundling além desse script gerando um arquivo.
 
-Assim a URL de gravação nunca aparece no histórico do Git nem no código
-visível publicamente — só existe em tempo de build, dentro da
+Assim os segredos nunca aparecem no histórico do Git nem no código
+visível publicamente — só existem em tempo de build, dentro da
 infraestrutura do Vercel/Netlify.
 
 ## Formato esperado no upload de Excel (admin)
