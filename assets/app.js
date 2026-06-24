@@ -1,6 +1,9 @@
 /* Painel DEJUR Cerus — lógica do dashboard público.
-   Fonte de dados: CSV publicado do Google Sheets (ver config.js).
-   Se não houver link configurado ou a busca falhar, usa data/sample-data.js como fallback. */
+   Fonte de dados: Apps Script (APPS_SCRIPT_URL), que soma os registros de
+   TODAS as abas "DADOS ..." da planilha (uma por mês). Se APPS_SCRIPT_URL
+   não estiver configurado, cai para o CSV publicado de uma única aba
+   (SHEET_CSV_URL); se nada estiver configurado ou a busca falhar, usa
+   data/sample-data.js como fallback. */
 
 const MONTH_NAMES = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const DOW_NAMES = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
@@ -81,11 +84,21 @@ function loadFromSample(){
   init();
 }
 
-function loadData(){
+function applySheetRows(rawRows, sourceLabel){
+  RAW_DATA = rawRows.filter(r => r['ASSUNTO / E-MAIL'] || r['RESPONSÁVEL']).map(normalizeSheetRow);
+  if(!RAW_DATA.length){
+    console.warn(`Nenhuma linha válida encontrada (${sourceLabel}) — usando dados de exemplo.`);
+    loadFromSample();
+    return;
+  }
+  init();
+}
+
+function loadFromCsv(){
   const url = window.APP_CONFIG && window.APP_CONFIG.SHEET_CSV_URL;
   const isConfigured = url && !url.includes('COLOQUE_AQUI');
   if(!isConfigured){
-    console.warn('SHEET_CSV_URL não configurado em config.js — usando dados de exemplo (data/sample-data.js).');
+    console.warn('Nenhuma fonte de dados configurada em config.js — usando dados de exemplo (data/sample-data.js).');
     loadFromSample();
     return;
   }
@@ -95,23 +108,48 @@ function loadData(){
     skipEmptyLines: true,
     complete: (results) => {
       if(!results.data || !results.data.length){
-        console.warn('Planilha retornou vazia — usando dados de exemplo.');
+        console.warn('Planilha (CSV) retornou vazia — usando dados de exemplo.');
         loadFromSample();
         return;
       }
-      RAW_DATA = results.data.filter(r => r['ASSUNTO / E-MAIL'] || r['RESPONSÁVEL']).map(normalizeSheetRow);
-      if(!RAW_DATA.length){
-        console.warn('Nenhuma linha válida encontrada na planilha — usando dados de exemplo.');
-        loadFromSample();
-        return;
-      }
-      init();
+      applySheetRows(results.data, 'SHEET_CSV_URL');
     },
     error: (err) => {
-      console.error('Falha ao buscar a planilha publicada, usando dados de exemplo.', err);
+      console.error('Falha ao buscar o CSV publicado, usando dados de exemplo.', err);
       loadFromSample();
     }
   });
+}
+
+/* Soma os registros de todas as abas "DADOS ..." via Apps Script (doGet).
+   Cobre múltiplos meses (ex.: DADOS MAIO 26 + DADOS JUNHO 26) numa só base,
+   o que mantém corretas as comparações mês a mês já existentes no painel. */
+function loadFromAppsScript(){
+  const url = window.APP_CONFIG && window.APP_CONFIG.APPS_SCRIPT_URL;
+  const isConfigured = url && !url.includes('COLOQUE_AQUI');
+  if(!isConfigured){
+    loadFromCsv();
+    return;
+  }
+  fetch(url)
+    .then(res => { if(!res.ok) throw new Error('status ' + res.status); return res.json(); })
+    .then(json => {
+      if(!json.ok) throw new Error(json.error || 'Falha desconhecida ao ler a planilha.');
+      if(!json.rows || !json.rows.length){
+        console.warn('Apps Script retornou vazio — tentando SHEET_CSV_URL.');
+        loadFromCsv();
+        return;
+      }
+      applySheetRows(json.rows, 'APPS_SCRIPT_URL');
+    })
+    .catch(err => {
+      console.error('Falha ao buscar dados via Apps Script, tentando SHEET_CSV_URL.', err);
+      loadFromCsv();
+    });
+}
+
+function loadData(){
+  loadFromAppsScript();
 }
 
 /* ============ FILTROS ============ */

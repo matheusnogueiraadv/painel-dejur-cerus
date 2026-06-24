@@ -35,7 +35,19 @@ passos 2 e 3) com os valores reais; em produção (Vercel/Netlify), eles
 são injetados via variável de ambiente no build, nunca aparecendo no
 código-fonte (veja o passo 5).
 
-## Colunas da planilha (primeira aba, primeira linha = cabeçalho)
+## Abas da planilha (uma por mês)
+
+A planilha pode ter **várias abas de dados**, uma por mês, desde que o
+nome comece com `DADOS` (ex.: `DADOS MAIO 26`, `DADOS JUNHO 26`,
+`DADOS JULHO 26`...). O painel público e o admin somam os registros de
+**todas** as abas `DADOS ...` automaticamente — basta criar uma nova aba
+a cada mês, copiando os mesmos cabeçalhos, que o painel passa a incluí-la
+sem precisar mudar nada no código. Indicadores, gráficos de evolução
+mensal e os comparativos entre meses continuam funcionando normalmente,
+já que cada registro carrega sua própria data — a divisão em abas é só
+organizacional.
+
+Cabeçalhos esperados na primeira linha de cada aba `DADOS ...`:
 
 ```
 ASSUNTO / E-MAIL | DATA RECEBIMENTO | DATA ENCAMINHAMENTO PARA O RESPONSAVEL - CIÊNCIA DO RESPONSAVEL |
@@ -46,8 +58,14 @@ STATUS | OBSERVAÇÕES | QUANTIDADE DE TAREFAS | SETOR SOLICITANTE
 Datas no formato `DD/MM/AAAA`. `assets/app.js` lê essas colunas pelo
 nome exato (função `normalizeSheetRow`) e calcula automaticamente ano,
 mês e dia da semana a partir de `DATA RECEBIMENTO` para os gráficos.
-`apps-script/Code.gs` sempre usa a **primeira aba** da planilha, então
-não importa como ela se chama — só a ordem/nome das colunas importa.
+
+`apps-script/Code.gs` soma as abas `DADOS ...` na leitura (`doGet`) e,
+na gravação pelo admin (`doPost`), grava sempre na aba do **mês/ano
+atual** (ex.: em junho/2026 grava em `DADOS JUNHO 26`); se essa aba
+ainda não existir, usa a última aba `DADOS ...` da planilha. O painel
+público lê primeiro via `APPS_SCRIPT_URL` (soma todas as abas); só usa
+o CSV de uma única aba (`SHEET_CSV_URL`) como reserva, se o Apps Script
+não estiver configurado ou falhar.
 
 ## Passo a passo de configuração
 
