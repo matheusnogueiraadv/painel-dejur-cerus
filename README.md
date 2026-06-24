@@ -133,36 +133,48 @@ Se `config.js` ainda não estiver preenchido, `index.html` usa
 automaticamente os dados de exemplo em `data/sample-data.js`, então o
 painel público sempre funciona mesmo antes do setup da planilha.
 
-### 5. Publicar para a equipe (repositório público)
+### 5. Publicar para a equipe (Cloudflare Pages, repositório público)
 
-Suba este projeto para um repositório no GitHub e conecte a
-[Vercel](https://vercel.com) ou [Netlify](https://netlify.com) — qualquer
-uma gera uma URL pública automaticamente a cada novo commit.
+Suba este projeto para um repositório no GitHub e conecte ao
+[Cloudflare Pages](https://pages.cloudflare.com) — gera uma URL pública
+(`*.pages.dev`) automaticamente a cada novo commit, no plano gratuito,
+sem cartão de crédito e sem o sistema de "créditos" compartilhados que
+outros serviços (Netlify, Vercel) usam para limitar builds.
+
+> Por que não Netlify/Vercel: o plano gratuito deles também funciona,
+> mas builds ficam vinculados a "créditos" da conta/equipe que podem se
+> esgotar e pausar os deploys (foi o que aconteceu durante o
+> desenvolvimento deste projeto). Cloudflare Pages não tem essa
+> limitação para sites estáticos simples como este.
 
 Como o repositório é **público**, `APPS_SCRIPT_URL` e
-`ADMIN_PASSWORD_HASH` não podem estar no código. Em vez de GitHub Pages
-(que não tem variáveis de ambiente), use Vercel ou Netlify com um Build
-Command que gera `config.runtime.js` na hora do deploy, lendo os
-valores de variáveis de ambiente configuradas no painel do serviço
-(nunca no código):
+`ADMIN_PASSWORD_HASH` não podem estar no código. No Cloudflare Pages:
 
-1. No painel do Vercel/Netlify, em **Environment Variables**, crie
-   `APPS_SCRIPT_URL` e `ADMIN_PASSWORD_HASH` com os valores reais (os
-   mesmos dos passos 2 e 3).
-2. Configure o **Build Command** como:
-   ```
-   echo "window.APP_CONFIG=window.APP_CONFIG||{};window.APP_CONFIG.APPS_SCRIPT_URL='$APPS_SCRIPT_URL';window.APP_CONFIG.ADMIN_PASSWORD_HASH='$ADMIN_PASSWORD_HASH';" > config.runtime.js
-   ```
-3. `admin.html` já carrega `<script src="config.runtime.js">` depois de
-   `config.js` (mesmo padrão usado para `config.local.js` em
-   desenvolvimento local — um 404 nesse arquivo não quebra a página, só
-   significa que os valores de produção não foram configurados ainda).
-4. Output/Publish directory: a raiz do projeto (`.`), já que não há
-   etapa de bundling além desse script gerando um arquivo.
+1. Acesse [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers
+   & Pages** → **Create application** → aba **Pages** → **Connect to
+   Git** → selecione o repositório `painel-dejur-cerus`.
+2. Em **Build settings**:
+   - Framework preset: **None**.
+   - Build command:
+     ```
+     echo "window.APP_CONFIG=window.APP_CONFIG||{};window.APP_CONFIG.APPS_SCRIPT_URL='$APPS_SCRIPT_URL';window.APP_CONFIG.ADMIN_PASSWORD_HASH='$ADMIN_PASSWORD_HASH';" > config.runtime.js
+     ```
+   - Build output directory: `/` (raiz do projeto).
+3. Antes de finalizar (ou depois, em **Settings → Environment
+   variables**), crie as variáveis `APPS_SCRIPT_URL` e
+   `ADMIN_PASSWORD_HASH` com os valores reais (os mesmos dos passos 2 e
+   3 acima) — disponíveis para "Production" (e "Preview", se quiser
+   testar branches).
+4. Salve e implante (**Save and Deploy**). A cada novo `git push` para
+   `main`, o Cloudflare Pages reconstrói e publica automaticamente.
 
+`index.html` e `admin.html` já carregam `<script src="config.runtime.js">`
+depois de `config.js` (mesmo padrão usado para `config.local.js` em
+desenvolvimento local — um 404 nesse arquivo não quebra a página, só
+significa que os valores de produção não foram configurados ainda).
 Assim os segredos nunca aparecem no histórico do Git nem no código
 visível publicamente — só existem em tempo de build, dentro da
-infraestrutura do Vercel/Netlify.
+infraestrutura do Cloudflare.
 
 ## Formato esperado no upload de Excel (admin)
 
