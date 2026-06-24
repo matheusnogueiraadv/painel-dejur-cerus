@@ -1,0 +1,10 @@
+# Configuração do Cloudflare Workers (Static Assets) para servir este site estático.
+# A conta usada para o deploy unifica "Workers" e "Pages" no mesmo fluxo, e o
+# deploy via Git roda "npx wrangler deploy" — este arquivo diz ao Wrangler para
+# servir os arquivos da raiz do projeto como assets estáticos, sem precisar de
+# um script de Worker (main).
+name = "painel-dejur-cerus"
+compatibility_date = "2024-09-23"
+
+[assets]
+directory = "."
