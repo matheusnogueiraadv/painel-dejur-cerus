@@ -37,13 +37,19 @@ function getAbasDados_(){
     .filter(s => s.getName().toUpperCase().trim().indexOf(ABA_PREFIXO) === 0);
 }
 
-/* Linhas de uma aba, como objetos {cabeçalho: valor}. Ignora abas sem
-   cabeçalho (vazias) e linhas completamente em branco. */
+/* Linhas de uma aba, como objetos {cabeçalho: valor}. Procura a linha de
+   cabeçalho de verdade (a que contém "ASSUNTO"), em vez de assumir que é
+   sempre a primeira — algumas abas têm uma linha em branco/espaços antes
+   do cabeçalho. Cabeçalhos são lidos com trim() para tolerar espaços
+   extras (ex.: "  ASSUNTO / E-MAIL"). Ignora abas sem cabeçalho (vazias)
+   e linhas completamente em branco. */
 function lerLinhasDaAba_(sheet){
-  if(sheet.getLastRow() < 2) return [];
+  if(sheet.getLastRow() < 1) return [];
   const values = sheet.getDataRange().getValues();
-  const headers = values.shift();
-  return values
+  const headerIndex = values.findIndex(r => r.some(c => String(c).toUpperCase().indexOf('ASSUNTO') !== -1));
+  if(headerIndex === -1) return [];
+  const headers = values[headerIndex].map(h => String(h).trim());
+  return values.slice(headerIndex + 1)
     .filter(r => r.some(c => c !== '' && c !== null))
     .map(r => {
       const obj = {};
