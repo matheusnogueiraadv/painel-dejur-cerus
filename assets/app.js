@@ -6,7 +6,15 @@
    data/sample-data.js como fallback. */
 
 const MONTH_NAMES = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-const DOW_NAMES = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+const DEZENA_NAMES = ['Dia 01–10','Dia 11–20','Dia 21–30/31'];
+
+/* 1 = dias 01–10, 2 = dias 11–20, 3 = dias 21–30/31 do mês. */
+function dezenaFromDay(day){
+  if(!day) return null;
+  if(day <= 10) return 1;
+  if(day <= 20) return 2;
+  return 3;
+}
 const PALETTE = ['#F47920','#1A1A1A','#C75D0F','#F2A93B','#6E6358','#8C6E4B','#3E3E3E','#D98A3D','#B5491E','#4A4038'];
 
 let RAW_DATA = [];
@@ -32,7 +40,7 @@ function deriveCalendarFields(row){
     ...row,
     ano: rec ? rec.getFullYear() : null,
     mes: rec ? rec.getMonth()+1 : null,
-    dow: rec ? (rec.getDay()+6)%7 : null, // 0=Seg ... 6=Dom
+    dezena: rec ? dezenaFromDay(rec.getDate()) : null,
   };
 }
 
@@ -73,7 +81,7 @@ function normalizeRow(d){
     setor: d.setor || '',
     ano: Number(d.ano) || null,
     mes: Number(d.mes) || null,
-    dow: d.dow === '' || d.dow === undefined || d.dow === null ? null : Number(d.dow),
+    dezena: dezenaFromDay(d.recebimento ? new Date(d.recebimento + 'T00:00:00').getDate() : null),
     continuacao: d.continuacao === true || d.continuacao === 'true' || d.continuacao === 'TRUE',
     caso: d.caso || d.assunto || '',
   };
@@ -374,15 +382,15 @@ function renderHeatmap(data){
   const months = uniqueSorted(data.map(d=>d.mes)).sort((a,b)=>a-b);
   const matrix = {};
   let max = 0;
-  for(let dow=0; dow<7; dow++){ matrix[dow]={}; months.forEach(m=>{ matrix[dow][m]=0; }); }
-  data.forEach(d=>{ if(d.dow!==null && d.mes){ matrix[d.dow][d.mes] = (matrix[d.dow][d.mes]||0)+1; if(matrix[d.dow][d.mes]>max) max = matrix[d.dow][d.mes]; } });
+  for(let dez=1; dez<=3; dez++){ matrix[dez]={}; months.forEach(m=>{ matrix[dez][m]=0; }); }
+  data.forEach(d=>{ if(d.dezena!==null && d.mes){ matrix[d.dezena][d.mes] = (matrix[d.dezena][d.mes]||0)+1; if(matrix[d.dezena][d.mes]>max) max = matrix[d.dezena][d.mes]; } });
 
   let html = '<table class="heatmap"><thead><tr><th></th>' + months.map(m=>`<th>${MONTH_NAMES[m]}</th>`).join('') + '</tr></thead><tbody>';
-  for(let dow=0; dow<7; dow++){
-    html += `<tr><td class="heat-rowlabel">${DOW_NAMES[dow]}</td>`;
+  for(let dez=1; dez<=3; dez++){
+    html += `<tr><td class="heat-rowlabel">${DEZENA_NAMES[dez-1]}</td>`;
     months.forEach(m=>{
-      const v = matrix[dow][m]||0;
-      html += `<td><div class="heat-cell" style="background:${heatColor(v,max)}" title="${DOW_NAMES[dow]}, ${MONTH_NAMES[m]}: ${v} demandas">${v||''}</div></td>`;
+      const v = matrix[dez][m]||0;
+      html += `<td><div class="heat-cell" style="background:${heatColor(v,max)}" title="${DEZENA_NAMES[dez-1]}, ${MONTH_NAMES[m]}: ${v} demandas">${v||''}</div></td>`;
     });
     html += '</tr>';
   }
